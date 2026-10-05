@@ -51,7 +51,7 @@
         "messages": {
           "values": [
             {
-              "content": "=Analyze this lead for potential interest in our product.\n\nName: {{$json.name}}\nCompany: {{$json.company}}\nJob title: {{$json.job_title}}\nLinkedIn: {{$json.linkedin_url}}\nEmail: {{$json.email}}\n\nGive a lead score from 1 to 100 and a short reason.\n\nReturn exactly in this format:\nLead Score: [number]\nReason: [short reason]"
+              "content": "=Analyze this professional lead to determine whether they could be a potential investor or investment decision-maker for our product/company.\n\nLead information:\n\nName: {{$json.name}}\nCompany: {{$json.company}}\nJob title: {{$json.job_title}}\nLinkedIn: {{$json.linkedin_url}}\nEmail: {{$json.email}}\n\nEvaluate:\n1. Is this person likely to be an investor, founder, CEO, venture capitalist, angel investor, or investment decision-maker?\n2. How relevant is their professional role to investing in a product/company?\n3. Give an investor potential score from 1 to 100.\n4. Give a short reason for the score.\n\nReturn exactly:\n\nInvestor Score: [number]\nInvestor Type: [type or \"Not identified\"]\nReason: [short reason]"
             }
           ]
         },
@@ -74,7 +74,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const originalLeads = $('Extract from File').all();\n\nreturn items.map((item, index) => {\n  const lead = originalLeads[index].json;\n  const content = item.json.content || '';\n\n  const scoreMatch = content.match(/Lead Score:\\s*(\\d+)/i);\n  const reasonMatch = content.match(/Reason:\\s*(.*)/is);\n\n  return {\n    json: {\n      name: lead.name,\n      company: lead.company,\n      job_title: lead.job_title,\n      email: lead.email,\n      linkedin_url: lead.linkedin_url,\n      lead_score: scoreMatch ? Number(scoreMatch[1]) : null,\n      reason: reasonMatch ? reasonMatch[1].trim() : ''\n    }\n  };\n});"
+        "jsCode": "const originalLeads = $('Extract from File').all();\n\nreturn items.map((item, index) => {\n  const lead = originalLeads[index].json;\n  const content = item.json.content || \"\";\n\n  const scoreMatch = content.match(/Investor Score:\\s*(\\d+)/i);\n\n  // Determine type primarily from the person's actual job title\n  const title = (lead.job_title || \"\").toLowerCase();\n\n  let investorType = \"Not identified\";\n\n  if (\n    title.includes(\"venture capital\") ||\n    title.includes(\"vc\") ||\n    title.includes(\"venture partner\")\n  ) {\n    investorType = \"Venture Capitalist\";\n  } else if (\n    title.includes(\"angel investor\") ||\n    title.includes(\"angel\")\n  ) {\n    investorType = \"Angel Investor\";\n  } else if (\n    title.includes(\"founder\") ||\n    title.includes(\"co-founder\") ||\n    title.includes(\"cofounder\")\n  ) {\n    investorType = \"Founder\";\n  } else if (title.includes(\"ceo\")) {\n    investorType = \"CEO\";\n  } else if (\n    title.includes(\"investor\") ||\n    title.includes(\"investment\")\n  ) {\n    investorType = \"Investor\";\n  }\n\n  const reasonMatch = content.match(\n    /Reason:\\s*([\\s\\S]*?)(?:\\n\\n|$)/i\n  );\n\n  return {\n    json: {\n      name: lead.name,\n      company: lead.company,\n      job_title: lead.job_title,\n      email: lead.email,\n      linkedin_url: lead.linkedin_url,\n      investor_score: scoreMatch ? Number(scoreMatch[1]) : null,\n      investor_type: investorType,\n      reason: reasonMatch ? reasonMatch[1].trim() : \"\"\n    }\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -94,8 +94,8 @@
       "type": "n8n-nodes-base.removeDuplicates",
       "typeVersion": 2,
       "position": [
-        1296,
-        0
+        1440,
+        192
       ],
       "id": "103c02a9-17c3-4590-9b56-e990f1b982ca",
       "name": "Remove Duplicates"
@@ -109,11 +109,45 @@
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
       "position": [
-        1520,
-        0
+        1568,
+        -16
       ],
       "id": "4b9b0d68-1bd8-42ee-9797-023a72486595",
       "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2385b837-e716-417a-bc2e-7311abf0fe12",
+              "leftValue": "={{$json.investor_score}}",
+              "rightValue": 50,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1296,
+        0
+      ],
+      "id": "fd59d434-c519-4332-9613-f35fa090d99d",
+      "name": "If"
     }
   ],
   "pinData": {},
@@ -166,7 +200,7 @@
       "main": [
         [
           {
-            "node": "Remove Duplicates",
+            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -174,6 +208,11 @@
       ]
     },
     "Remove Duplicates": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
       "main": [
         [
           {
@@ -191,7 +230,7 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "6aed4c6b-ce91-4fec-a98f-e0e2bf7e15e9",
+  "versionId": "182cd171-38ec-4b81-aa7b-a41f979b49cc",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "e1ec3e4485ca34c5b5d9b010f49ef345ad44b1a93960e94e757f48c82c07c9a9"
