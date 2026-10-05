@@ -1,0 +1,202 @@
+{
+  "name": "Start Lead Generation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "28541644-0ff6-4a19-8f9f-23bbd8bd096a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "fileSelector": "/files/lead.csv.xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "279075fb-1e99-43ef-9cd7-b477a850a057",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "b3dd70a4-9816-45ff-9a50-0c25ccdb3128",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "llama3.2:latest",
+          "mode": "list",
+          "cachedResultName": "llama3.2:latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analyze this lead for potential interest in our product.\n\nName: {{$json.name}}\nCompany: {{$json.company}}\nJob title: {{$json.job_title}}\nLinkedIn: {{$json.linkedin_url}}\nEmail: {{$json.email}}\n\nGive a lead score from 1 to 100 and a short reason.\n\nReturn exactly in this format:\nLead Score: [number]\nReason: [short reason]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "8c8a683a-1051-4d35-ae57-b7836f884668",
+      "name": "Message a model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "8hjfrYdv8phIxBmf",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const originalLeads = $('Extract from File').all();\n\nreturn items.map((item, index) => {\n  const lead = originalLeads[index].json;\n  const content = item.json.content || '';\n\n  const scoreMatch = content.match(/Lead Score:\\s*(\\d+)/i);\n  const reasonMatch = content.match(/Reason:\\s*(.*)/is);\n\n  return {\n    json: {\n      name: lead.name,\n      company: lead.company,\n      job_title: lead.job_title,\n      email: lead.email,\n      linkedin_url: lead.linkedin_url,\n      lead_score: scoreMatch ? Number(scoreMatch[1]) : null,\n      reason: reasonMatch ? reasonMatch[1].trim() : ''\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        0
+      ],
+      "id": "b728d356-9061-4f3f-8dc5-85dd84f42bb9",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "email",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        0
+      ],
+      "id": "103c02a9-17c3-4590-9b56-e990f1b982ca",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "options": {
+          "fileName": "leads.csv"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        0
+      ],
+      "id": "4b9b0d68-1bd8-42ee-9797-023a72486595",
+      "name": "Convert to File"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "6aed4c6b-ce91-4fec-a98f-e0e2bf7e15e9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e1ec3e4485ca34c5b5d9b010f49ef345ad44b1a93960e94e757f48c82c07c9a9"
+  },
+  "nodeGroups": [],
+  "id": "cFMuePvzQnDgXHmw",
+  "tags": []
+}
